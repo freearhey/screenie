@@ -57,6 +57,7 @@ function attach() {
       } else {
         resolve(result)
       }
+      console.log('attach')
     })
   })
 }
@@ -69,6 +70,7 @@ function detach() {
       } else {
         resolve(result)
       }
+      console.log('detach')
     })
   })
 }
@@ -87,22 +89,25 @@ function sendCommand(method, params = {}) {
 }
 
 function captureScreenshot() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     setTimeout(async () => {
-      const { data } = await sendCommand('Page.captureScreenshot', {
-        format: config.output.format,
-        clip: {
-          x: 0,
-          y: 0,
-          width: device.width,
-          height: device.height,
-          scale: 1
-        }, 
-        fromSurface: true,
-        quality: config.output.quality
-      })
-
-      resolve(data)
+      try {
+        const { data } = await sendCommand('Page.captureScreenshot', {
+          format: config.output.format,
+          clip: {
+            x: 0,
+            y: 0,
+            width: device.width,
+            height: device.height,
+            scale: 1
+          }, 
+          fromSurface: true,
+          quality: config.output.quality
+        })
+        resolve(data)
+      } catch(err) {
+        reject(err)
+      }
     }, config.capture.delay)
   })
 }
@@ -119,6 +124,8 @@ function download(base64) {
       } else {
         resolve()
       }
+
+      console.log('download', base64)
     })
   })
 }
