@@ -1,33 +1,57 @@
+const config = {
+  debugger: {
+    version: '1.3'
+  },
+  content: {
+    maxHeight: 7000 // large values cause glitches in screenshots
+  },
+  device: {
+    scaleFactor: devicePixelRatio,
+    mobile: false
+  },
+  capture: {
+    delay: 1000
+  },
+  output: {
+    format: 'png',
+    quality: 100,
+    conflictAction: 'uniquify',
+    saveAs: false
+  }
+}
+
 let target, device, currentTab
 chrome.browserAction.onClicked.addListener(async (tab) => {
   console.log('I\'m taking a screenshot...')
   target = { tabId: tab.id }
   currentTab = tab
-  await attach()
-  await sendCommand('Debugger.enable')
-  await sendCommand('Emulation.clearDeviceMetricsOverride')
-  await sendCommand('Overlay.setShowViewportSizeOnResize', { show: true })
-  await sendCommand('Overlay.setShowViewportSizeOnResize', { show: false })
-  const layoutMetrics = await sendCommand('Page.getLayoutMetrics')
-  device = { 
-    width: layoutMetrics.contentSize.width, 
-    height: layoutMetrics.contentSize.height,
-    // deviceScaleFactor: devicePixelRatio,
-    deviceScaleFactor: 2.200000047683716,
-    mobile: false
+  try {
+    await attach()
+    await sendCommand('Debugger.enable')
+    await sendCommand('Emulation.clearDeviceMetricsOverride')
+    const layoutMetrics = await sendCommand('Page.getLayoutMetrics')
+    const height = layoutMetrics.contentSize.height > config.content.maxHeight ? config.content.maxHeight : layoutMetrics.contentSize.height
+    device = { 
+      width: layoutMetrics.contentSize.width, 
+      height,
+      deviceScaleFactor: config.device.scaleFactor,
+      mobile: config.device.mobile
+    }
+    await sendCommand('Emulation.resetPageScaleFactor')
+    await sendCommand('Emulation.setDeviceMetricsOverride', device)
+    await sendCommand('Overlay.disable')
+    const screenshot = await captureScreenshot()
+    await download(screenshot)
+    await detach()
+    console.log('Done!')
+  } catch(err) {
+    console.error(err)
   }
-  await sendCommand('Emulation.resetPageScaleFactor')
-  await sendCommand('Emulation.setDeviceMetricsOverride', device)
-  await sendCommand('Overlay.disable')
-  const screenshot = await captureScreenshot()
-  await download(screenshot)
-  await detach()
-  console.log('Done!')
 })
 
 function attach() {
   return new Promise((resolve, reject) => {
-    chrome.debugger.attach(target, '1.3', result => {
+    chrome.debugger.attach(target, config.debugger.version, result => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError)
       } else {
@@ -66,7 +90,7 @@ function captureScreenshot() {
   return new Promise((resolve) => {
     setTimeout(async () => {
       const { data } = await sendCommand('Page.captureScreenshot', {
-        format: 'png',
+        format: config.output.format,
         clip: {
           x: 0,
           y: 0,
@@ -75,21 +99,21 @@ function captureScreenshot() {
           scale: 1
         }, 
         fromSurface: true,
-        quality: 100
+        quality: config.output.quality
       })
 
       resolve(data)
-    }, 1000)
+    }, config.capture.delay)
   })
 }
 
 function download(base64) {
   return new Promise((resolve, reject) => {
-    const contentType = 'image/png'
+    const contentType = 'image/' + config.output.format
     const blob = base64ToBlob(base64, contentType)
     const obj = URL.createObjectURL(blob, { type: contentType }) 
-    const filename = currentTab.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").replace(/[^a-z0-9\.\-]/gi, '_').toLowerCase() + '.png'
-    chrome.downloads.download({ url: obj, filename: filename, conflictAction: 'uniquify', saveAs: false }, () => {
+    const filename = currentTab.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").replace(/[^a-z0-9\.\-]/gi, '_').toLowerCase() + '.' + config.output.format
+    chrome.downloads.download({ url: obj, filename: filename, conflictAction: config.output.conflictAction, saveAs: config.output.saveAs }, () => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError)
       } else {
