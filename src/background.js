@@ -21,8 +21,8 @@ const config = {
 }
 
 let target, device, currentTab
-chrome.browserAction.onClicked.addListener(async (tab) => {
-  console.log('I\'m taking a screenshot...')
+chrome.browserAction.onClicked.addListener(async tab => {
+  console.log("I'm taking a screenshot...")
   target = { tabId: tab.id }
   currentTab = tab
   try {
@@ -30,9 +30,12 @@ chrome.browserAction.onClicked.addListener(async (tab) => {
     await sendCommand('Debugger.enable')
     await sendCommand('Emulation.clearDeviceMetricsOverride')
     const layoutMetrics = await sendCommand('Page.getLayoutMetrics')
-    const height = layoutMetrics.contentSize.height > config.content.maxHeight ? config.content.maxHeight : layoutMetrics.contentSize.height
-    device = { 
-      width: layoutMetrics.contentSize.width, 
+    const height =
+      layoutMetrics.contentSize.height > config.content.maxHeight
+        ? config.content.maxHeight
+        : layoutMetrics.contentSize.height
+    device = {
+      width: layoutMetrics.contentSize.width,
       height,
       deviceScaleFactor: config.device.scaleFactor,
       mobile: config.device.mobile
@@ -44,7 +47,7 @@ chrome.browserAction.onClicked.addListener(async (tab) => {
     await download(screenshot)
     await detach()
     console.log('Done!')
-  } catch(err) {
+  } catch (err) {
     console.error(err)
   }
 })
@@ -100,12 +103,12 @@ function captureScreenshot() {
             width: device.width,
             height: device.height,
             scale: 1
-          }, 
+          },
           fromSurface: true,
           quality: config.output.quality
         })
         resolve(data)
-      } catch(err) {
+      } catch (err) {
         reject(err)
       }
     }, config.capture.delay)
@@ -116,17 +119,31 @@ function download(base64) {
   return new Promise((resolve, reject) => {
     const contentType = 'image/' + config.output.format
     const blob = base64ToBlob(base64, contentType)
-    const obj = URL.createObjectURL(blob, { type: contentType }) 
-    const filename = currentTab.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").replace(/[^a-z0-9\.\-]/gi, '_').toLowerCase() + '.' + config.output.format
-    chrome.downloads.download({ url: obj, filename: filename, conflictAction: config.output.conflictAction, saveAs: config.output.saveAs }, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError)
-      } else {
-        resolve()
-      }
+    const obj = URL.createObjectURL(blob, { type: contentType })
+    const filename =
+      currentTab.url
+        .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
+        .replace(/[^a-z0-9\.\-]/gi, '_')
+        .toLowerCase() +
+      '.' +
+      config.output.format
+    chrome.downloads.download(
+      {
+        url: obj,
+        filename: filename,
+        conflictAction: config.output.conflictAction,
+        saveAs: config.output.saveAs
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError)
+        } else {
+          resolve()
+        }
 
-      console.log('download', base64)
-    })
+        console.log('download', base64)
+      }
+    )
   })
 }
 
@@ -146,6 +163,6 @@ function base64ToBlob(b64Data, contentType, sliceSize = 512) {
     byteArrays.push(byteArray)
   }
 
-  const blob = new Blob(byteArrays, {type: contentType})
+  const blob = new Blob(byteArrays, { type: contentType })
   return blob
 }
