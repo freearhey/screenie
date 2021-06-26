@@ -1,6 +1,6 @@
 {
   "name": "screenie",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "manifest_version": 2,
   "description": "A tiny extension that takes a full page screenshot in one click.",
   "icons": {
@@ -13,7 +13,7 @@
     "page": "src/background.html",
     "persistent": false
   },
-  "permissions": ["debugger", "downloads"],
+  "permissions": ["debugger", "downloads", "tabs"],
   "browser_action": {
     "default_icon": "icons/icon32.png",
     "default_title": "Make screenshot"
