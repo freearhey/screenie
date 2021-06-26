@@ -20,11 +20,10 @@ const config = {
   }
 }
 
-let target, device, currentTab
+let target, device
 chrome.browserAction.onClicked.addListener(async tab => {
   console.log("I'm taking a screenshot...")
   target = { tabId: tab.id }
-  currentTab = tab
   try {
     await attach()
     await sendCommand('Debugger.enable')
@@ -120,30 +119,33 @@ function download(base64) {
     const contentType = 'image/' + config.output.format
     const blob = base64ToBlob(base64, contentType)
     const obj = URL.createObjectURL(blob, { type: contentType })
-    const filename =
-      currentTab.url
-        .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
-        .replace(/[^a-z0-9\.\-]/gi, '_')
-        .toLowerCase() +
-      '.' +
-      config.output.format
-    chrome.downloads.download(
-      {
-        url: obj,
-        filename: filename,
-        conflictAction: config.output.conflictAction,
-        saveAs: config.output.saveAs
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError)
-        } else {
-          resolve()
-        }
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+      let currentUrl = tabs[0].url
+      const filename =
+        currentUrl
+          .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
+          .replace(/[^a-z0-9\.\-]/gi, '_')
+          .toLowerCase() +
+        '.' +
+        config.output.format
+      chrome.downloads.download(
+        {
+          url: obj,
+          filename: filename,
+          conflictAction: config.output.conflictAction,
+          saveAs: config.output.saveAs
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError)
+          } else {
+            resolve()
+          }
 
-        console.log('download', base64)
-      }
-    )
+          console.log('download', base64)
+        }
+      )
+    })
   })
 }
 
