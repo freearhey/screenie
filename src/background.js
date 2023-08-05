@@ -22,6 +22,16 @@ const config = {
 
 let target, device
 chrome.browserAction.onClicked.addListener(async tab => {
+  let currentUrl = tab.url
+  config.output.filename =
+        currentUrl
+          .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
+          .replace(/[^a-z0-9\.\-]/gi, '_')
+          .toLowerCase() +
+        '.' +
+        config.output.format
+  console.log(config.output.filename)
+
   console.log("I'm taking a screenshot...")
   target = { tabId: tab.id }
   try {
@@ -30,11 +40,11 @@ chrome.browserAction.onClicked.addListener(async tab => {
     await sendCommand('Emulation.clearDeviceMetricsOverride')
     const layoutMetrics = await sendCommand('Page.getLayoutMetrics')
     const height =
-      layoutMetrics.contentSize.height > config.content.maxHeight
+      layoutMetrics.cssContentSize.height > config.content.maxHeight
         ? config.content.maxHeight
-        : layoutMetrics.contentSize.height
+        : layoutMetrics.cssContentSize.height
     device = {
-      width: layoutMetrics.contentSize.width,
+      width: layoutMetrics.cssContentSize.width,
       height,
       deviceScaleFactor: config.device.scaleFactor,
       mobile: config.device.mobile
@@ -47,7 +57,7 @@ chrome.browserAction.onClicked.addListener(async tab => {
     await detach()
     console.log('Done!')
   } catch (err) {
-    console.error(err)
+    console.error(err.message)
   }
 })
 
@@ -104,7 +114,8 @@ function captureScreenshot() {
             scale: 1
           },
           fromSurface: true,
-          quality: config.output.quality
+          quality: config.output.quality,
+          captureBeyondViewport: true
         })
         resolve(data)
       } catch (err) {
@@ -119,19 +130,10 @@ function download(base64) {
     const contentType = 'image/' + config.output.format
     const blob = base64ToBlob(base64, contentType)
     const obj = URL.createObjectURL(blob, { type: contentType })
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
-      let currentUrl = tabs[0].url
-      const filename =
-        currentUrl
-          .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
-          .replace(/[^a-z0-9\.\-]/gi, '_')
-          .toLowerCase() +
-        '.' +
-        config.output.format
-      chrome.downloads.download(
+    chrome.downloads.download(
         {
           url: obj,
-          filename: filename,
+          filename: config.output.filename,
           conflictAction: config.output.conflictAction,
           saveAs: config.output.saveAs
         },
@@ -145,7 +147,6 @@ function download(base64) {
           console.log('download', base64)
         }
       )
-    })
   })
 }
 
