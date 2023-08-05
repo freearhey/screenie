@@ -7,7 +7,7 @@ export default class Screenshot {
     this.logger = logger
   }
 
-  capture(options) {
+  capture(options = {}) {
     this.logger.debug('Screenshot.capture:', options)
     return new Promise((resolve, reject) => {
       setTimeout(async () => {
