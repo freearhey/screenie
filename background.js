@@ -1,4 +1,4 @@
-import { Layout, Debugger, Screenshot, Emulator, Logger } from './models/index.js'
+import { Layout, Debugger, Screenshot, Emulator, Logger } from './src/index.js'
 
 chrome.action.onClicked.addListener(async tab => {
   const logger = new Logger({ debug: false })
